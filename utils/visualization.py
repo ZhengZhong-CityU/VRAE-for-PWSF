@@ -42,14 +42,14 @@ def get_results(path='BeijingPM', metric='CRPS'):
     for file in file_list:
         method=file.split('_')[0]
         new_metric=metric
-        if method not in ['MDNGMMGRU', 'MVRAEGMM', 'GP', 'DMDNN'] and metric=='CRPS':
+        if method not in ['MVRAEGMM', 'GP', 'CKDE-NRC','DMDNN'] and metric=='CRPS':
             new_metric='MAE'
-        if method in ['GRU', 'MDNGMMGRU', 'MVRAEGMM','DMDNN']:
+        if method in ['GRU', 'MVRAEGMM','DMDNN']:
             validation_root='validation_generation'
             test_root='test_generation'
             if method not in val_dict.keys():
                 val_dict[method]=10000
-            if method in ['MDNGMMGRU','DMDNN', 'DMDNNA']:
+            if method in ['DMDNN', 'DMDNNA']:
                 validation_root=os.path.join('validation_generation', '500_2')
                 test_root=os.path.join('test_generation', '500_2')
             if method=='MVRAEGMM':
@@ -70,7 +70,7 @@ def get_results(path='BeijingPM', metric='CRPS'):
                 continue
     
             
-        elif method in ['GP']:
+        elif method in ['GP', 'CKDE-NRC']:
                 score_root=os.path.join(path, file, 'test_generation', '500_2')
                 
         elif method in ['ARIMA', 'nearest', 'Linear']:
@@ -125,7 +125,7 @@ def get_prediction_results(path='AE'):
         method=file.split('_')[0]
         generated_file='generated_y.npy'
         root='test_generation'
-        if method in ['MDNGMMGRU',  'GP', 'DMDNN']:
+        if method in ['GP', 'CKDE-NRC', 'DMDNN']:
             root=root+'/500_2'
         if method=='MVRAEGMM':
             root=root+'/500_2_40_1' 
@@ -164,7 +164,7 @@ def plot_samples(dataset, result, num_images=5):
     for i in range(num_images):
         fig=plt.figure(figsize=((16,8)))
         for C, method in enumerate(result.keys()):
-            if method in ['VRAE-GMM', 'MDN-GMM', 'GPR', 'DMDNN']:
+            if method in ['VRAE-GMM', 'GPR', 'CKDE-NRC','DMDNN']:
                 data=result[method][0,:,random_indices[i],0]
                 sns.kdeplot(data, shade = True, label=method, color='C{}'.format(C))
 #                sns.distplot(data, label=method, color='C{}'.format(C), kde=True, norm_hist=True, hist=False)
@@ -198,7 +198,7 @@ def plot_predictions(dataset, result, ub_results, lb_results, start_point=0, end
     fig1=plt.figure(figsize=((16,8)))
     for C, method in enumerate(result.keys()):
         data=result[method][start_point:end_point,0]
-        if method in ['VRAE-GMM', 'MDN-GMM', 'GPR', 'DMDNN']:
+        if method in ['VRAE-GMM', 'GPR', 'CKDE-NRC','DMDNN']:
             pass
 #            data=result[method][0,0,start_point:end_point,0]
 #            plt.plot(data, label=method+' random sample',linestyle='--', color='C{}'.format(C))
@@ -217,7 +217,7 @@ def plot_predictions(dataset, result, ub_results, lb_results, start_point=0, end
     # figure 2
     fig2=plt.figure(figsize=((16,8)))
     for C, method in enumerate(result.keys()):
-        if method in ['VRAE-GMM', 'MDN-GMM', 'GPR', 'DMDNN']:
+        if method in ['VRAE-GMM', 'GPR', 'CKDE-NRC','DMDNN']:
             ub=ub_results[method][start_point:end_point]
             lb=lb_results[method][start_point:end_point]
 #            data=result[method][0,0,start_point:end_point,0]
@@ -253,7 +253,7 @@ def performance(dataset='ShenyangPM', confidence=0.95):
     ub_results={}
     lb_results={}
 
-    for method in ['VRAE-GMM', 'MDN-GMM', 'GPR', 'DMDNN']:
+    for method in ['VRAE-GMM', 'GPR','CKDE-NRC', 'DMDNN']:
         generated_y=CRPS_prediction_results[method]
         real_y=CRPS_prediction_results['Observation']
         ub, lb=bound(generated_y, confidence)
@@ -294,7 +294,7 @@ def plot_figures(dataset='ShenyangPM', confidence=0.95):
     CRPS_score_results, CRPS_prediction_results=get_results(path=dataset, metric='CRPS')
     ub_results={}
     lb_results={}
-    for method in ['VRAE-GMM', 'MDN-GMM', 'GPR', 'DMDNN']:
+    for method in ['VRAE-GMM', 'GPR','CKDE-NRC', 'DMDNN']:
         generated_y=CRPS_prediction_results[method]
         ub, lb=bound(generated_y, confidence)
         ub, lb=bound(generated_y, confidence)
@@ -309,7 +309,7 @@ def summarize(Prob_indices, dataset):
     data_dict=Prob_indices[dataset]
 
     confidence_list=list(Prob_indices[dataset].keys())
-    method_list=['GP', 'MDN-GMM', 'DMDNN', 'VRAE-GMM']
+    method_list=['GPR', 'CKDE-NRC', 'DMDNN', 'VRAE-GMM']
     
     result_final=[]
     for method, confidence in itertools.product(method_list, confidence_list):
@@ -341,7 +341,7 @@ def summarize(Prob_indices, dataset):
 
 def save_CRPS(CRPS_dict):
     dataset_list=list(CRPS_dict.keys())
-    method_list=['PC', 'ARIMA','Linear','GRU', 'GP', 'MDN-GMM', 'DMDNN', 'VRAE-GMM']
+    method_list=['PC', 'ARIMA','Linear','GRU', 'GPR','CKDE-NRC', 'DMDNN', 'VRAE-GMM']
     final_result=[]
     for dataset in dataset_list:
         result_oneset=[]
@@ -380,27 +380,29 @@ if __name__=='__main__':
 #    dataset_list=['BeijingPM']
 #   
     
-    ### get results
-#    CRPS_dict={}
-#    Prob_indices={}
-#    confidence_list=[0.9, 0.95] 
-#    for dataset, confidence in itertools.product(dataset_list, confidence_list):
-#        if dataset not in Prob_indices.keys():
-#            Prob_indices[dataset]={}
-#        CRPS_score_results, PICP_score_results,PINRW_score_results,PINAW_score_results,ACE_score_results,CWC_score_results,WS_score_results,DIC_score_results=performance(dataset, confidence)
-#        CRPS_dict[dataset]=CRPS_score_results
-#        Prob_indices[dataset][confidence]=[PICP_score_results,ACE_score_results,PINRW_score_results,PINAW_score_results,CWC_score_results,WS_score_results]
+    ## get results
+    CRPS_dict={}
+    Prob_indices={}
+    confidence_list=[0.9, 0.95] 
     
-    ### plot figures    
+    
+    for dataset, confidence in itertools.product(dataset_list, confidence_list):
+        if dataset not in Prob_indices.keys():
+            Prob_indices[dataset]={}
+        CRPS_score_results, PICP_score_results,PINRW_score_results,PINAW_score_results,ACE_score_results,CWC_score_results,WS_score_results,DIC_score_results=performance(dataset, confidence)
+        CRPS_dict[dataset]=CRPS_score_results
+        Prob_indices[dataset][confidence]=[PICP_score_results,ACE_score_results,PINRW_score_results,PINAW_score_results,CWC_score_results,WS_score_results]
+#    
+    ## plot figures    
     for dataset in dataset_list:
         plot_figures(dataset, 0.6)
 
-#    ## save probabilistic evaluation results to excel        
-#    for dataset in dataset_list:       
-#        result_final=summarize(Prob_indices, dataset)
-#    
-#    ## save probabilistic evaluation results to excel     
-#    save_CRPS(CRPS_dict)
+    # save probabilistic evaluation results to excel        
+    for dataset in dataset_list:       
+        result_final=summarize(Prob_indices, dataset)
+    
+    # save probabilistic evaluation results to excel     
+    save_CRPS(CRPS_dict)
 
         
         
