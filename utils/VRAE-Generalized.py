@@ -20,21 +20,21 @@ from torch_reparameterization import torch_gamma_rp, torch_beta_rp
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-
+eps=1e-7
 
 def KL_Gamma(alpha1, beta1, alpha2, beta2):
-    kl=(alpha1-1)*torch.digamma(alpha1)+torch.log(beta1)-alpha1-torch.lgamma(alpha1)
-    +torch.lgamma(alpha2)-alpha2*torch.log(beta2)-(alpha2-1)(torch.digamma(alpha1)-torch.log(beta1))+alpha1*beta2/beta1
+    # kl=(alpha1-1)*torch.digamma(alpha1)+torch.log(beta1)-alpha1-torch.lgamma(alpha1)+torch.lgamma(alpha2)-alpha2*torch.log(beta2)-(alpha2-1)*(torch.digamma(alpha1)-torch.log(beta1))+alpha1*beta2/beta1
+    kl=(alpha1-alpha2)*torch.digamma(alpha1)-torch.lgamma(alpha1)+torch.lgamma(alpha2)+alpha2*(torch.log(beta2+eps)-torch.log(beta1+eps))+alpha1*(beta1-beta2)/(beta2)
+
     return kl
 
 def KL_Beta(alpha1, beta1, alpha2, beta2):
-    kl=torch.log(alpha1+beta1)+torch.log(alpha2)+torch.log(beta2)-torch.log(alpha2+beta2)-torch.log(alpha1)-torch.log(beta1)
-    +(alpha1-alpha2)*(torch.digamma(alpha1)-torch.digmma(alpha1+beta1))+(beta1-beta2)*(torch.digamma(beta1)-torch.digmma(alpha1+beta1))
+    kl=torch.lgamma(alpha1+beta1)+torch.lgamma(alpha2)+torch.lgamma(beta2)-torch.lgamma(alpha2+beta2)-torch.lgamma(alpha1)-torch.lgamma(beta1)+(alpha1-alpha2)*(torch.digamma(alpha1)-torch.digamma(alpha1+beta1))+(beta1-beta2)*(torch.digamma(beta1)-torch.digamma(alpha1+beta1))
     return kl
     
     
 class MVRAEGMM(nn.Module):
-    def __init__(self, num_Gaussians, x_dim, h_dim, z_dim, rnn_layers, posterior='Gaussian'):
+    def __init__(self, num_Gaussians, x_dim, h_dim, z_dim, rnn_layers, posterior):
     ### x_dim is the dim of the inputs used for prediction
     ### h_dim is the dim of the hidden state
     ### z_dim is the sampling satate
@@ -107,7 +107,7 @@ class MVRAEGMM(nn.Module):
             encoder_t=self.encoder(torch.cat([phi_x_t, h[-1]],-1))
             encoder_para1_t=self.encoder_para1(encoder_t)
             encoder_para2_t=self.encoder_para2(encoder_t)
-            
+
             ## Decoder
             # Sampling from the posterior
             z_t=self.reparameterized_sample(encoder_para1_t, encoder_para2_t)
@@ -245,7 +245,7 @@ class MMVRAEGMM_model():
         self.trainable_num=self.get_parameter_number()               
         
     def build(self):
-        self.network=MVRAEGMM(self.args.num_Gaussians,self.args.num_inputs, self.args.h_dim, self.args.z_dim, self.args.rnn_layers)
+        self.network=MVRAEGMM(self.args.num_Gaussians,self.args.num_inputs, self.args.h_dim, self.args.z_dim, self.args.rnn_layers, self.args.posterior)
         self.network=self.network.to(self.device)    
         self.optimizer=torch.optim.Adam(self.network.parameters(), lr=self.args.lr, betas=(self.args.b1, self.args.b2))
     
